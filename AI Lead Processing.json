@@ -1,0 +1,329 @@
+{
+  "name": "AI Lead Processing",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -80,
+        -80
+      ],
+      "id": "e7f178ba-1d7a-4863-8279-ea0282f5733f",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5955fd31-8c7a-4643-a80d-4319da6149ba",
+              "name": "name",
+              "value": "Ahmed Hassan",
+              "type": "string"
+            },
+            {
+              "id": "70e9c1f6-5a4e-4acc-8469-fc24355bbd6c",
+              "name": "email",
+              "value": "ahmed@example.com",
+              "type": "string"
+            },
+            {
+              "id": "138f582b-864c-43cc-9dd4-bf6c86f402d9",
+              "name": "company",
+              "value": "ABC Company",
+              "type": "string"
+            },
+            {
+              "id": "57d2065a-8906-442b-ab1c-cf3d8e293833",
+              "name": "message",
+              "value": "We need an AI automation solution for our business. Please send us your pricing and proposal.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        224,
+        -96
+      ],
+      "id": "a4f6ba80-7fb7-48a9-9832-783cabb37e22",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are an AI Lead Qualification Assistant.\n\nAnalyze this potential customer:\n\nName: {{ $json.name }}\nEmail: {{ $json.email }}\nCompany: {{ $json.company }}\nMessage: {{ $json.message }}\n\nEvaluate the lead using only the supplied information.\n\nReturn ONLY a valid JSON object with these exact keys:\n{\n  \"lead_quality\": \"High\",\n  \"priority\": \"High\",\n  \"reason\": \"Short explanation\",\n  \"recommended_action\": \"Next step for the sales team\"\n}\n\nRules:\n- lead_quality must be High, Medium, or Low.\n- priority must be High, Medium, or Low.\n- Do not invent facts.\n- Return valid JSON only, with no Markdown fences or extra text.",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        480,
+        -112
+      ],
+      "id": "46772ee7-b688-4448-bfb9-1e8a1d439c77",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "qwen2.5:1.5b",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        512,
+        144
+      ],
+      "id": "7ef08560-2494-43bd-9f57-25c628584210",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "ecFeCI7PLLWVG37Q",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ec3d3d2-f5c8-424c-bd83-8ca33a65c54d",
+              "name": "ai_analysis",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        864,
+        -112
+      ],
+      "id": "e8636159-4cb2-4cc4-815b-ee838c2e6f59",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "\nconst raw = $input.first().json.ai_analysis;\n\nif (!raw) {\n  throw new Error(\"No AI analysis was returned.\");\n}\n\nconst cleaned = raw\n  .replace(/```json/gi, \"\")\n  .replace(/```/g, \"\")\n  .trim();\n\nconst result = JSON.parse(cleaned);\n\nconst lead = $(\"Edit Fields\").first().json;\n\nreturn [\n  {\n    json: {\n      name: lead.name,\n      email: lead.email,\n      company: lead.company,\n      message: lead.message,\n      lead_quality: result.lead_quality,\n      priority: result.priority,\n      reason: result.reason,\n      recommended_action: result.recommended_action\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        -48
+      ],
+      "id": "bd35ea90-56ab-49b6-89df-0c365c8f4adc",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dc9e39cd-550b-462b-9867-21523aa85ccb",
+              "leftValue": "={{ $json.priority }}",
+              "rightValue": "High",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1472,
+        32
+      ],
+      "id": "9d4fdb4f-4133-4130-a915-77926f50f81b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "chatId": "5243774780",
+        "text": "=New Lead Alert \n\nName: {{ $json.name }}\nCompany: {{ $json.company }}\nEmail: {{ $json.email }}\nPriority: {{ $json.priority }}\nReason: {{ $json.reason }}\nNext Action: {{ $json.recommended_action }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1696,
+        -32
+      ],
+      "id": "82427b49-cb3a-444d-916d-a7b007a8690d",
+      "name": "Send a text message",
+      "webhookId": "a874a298-8eeb-458d-a28f-a99861f58162",
+      "credentials": {
+        "telegramApi": {
+          "id": "t9IEkHPiSM8MDO83",
+          "name": "Telegram account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2dae37f7-c71c-498c-a359-b95ac0ec2459",
+              "name": "status",
+              "value": "Needs Review",
+              "type": "string"
+            },
+            {
+              "id": "cacac019-57d0-444c-94c5-6de34b08dcf9",
+              "name": "name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "8be7e783-2f14-4ec0-bd7f-30749f4a6bce",
+              "name": "email",
+              "value": "={{ $json.email }}",
+              "type": "string"
+            },
+            {
+              "id": "8937332a-6d19-4abc-9329-af2b9231c6ad",
+              "name": "priority",
+              "value": "={{ $json.priority }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1616,
+        176
+      ],
+      "id": "093a8d62-5bb5-4bb6-a77a-2a10b042f8d1",
+      "name": "Low Priority Lead.edit"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Low Priority Lead.edit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "6711cc2d-8473-44f0-b74b-5399d4ac69ae",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "391e4c0cc14337965ba00b46b33fb706d9d9e991a3387968bb43cc64f1a52884"
+  },
+  "nodeGroups": [],
+  "id": "rtPtdyJdoK3pfqRS",
+  "tags": []
+}
